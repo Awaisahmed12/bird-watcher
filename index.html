@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141413">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bird Watching">
+<title>Bird Watching</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  :root {
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --surface-2: #fafaf8;
+    --border: #e3e3df;
+    --text: #1a1a18;
+    --muted: #71706c;
+    --accent: #2d6a4f;
+    --danger: #b03a2e;
+    --home: #2d6a4f;
+    --gone: #71706c;
+    --arrived: #2563a8;
+    --leaving: #a8632d;
+    --toast-bg: #1a1a18;
+    --toast-fg: #f5f5f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413;
+      --surface: #1f1f1d;
+      --surface-2: #26262410;
+      --border: #2e2e2c;
+      --text: #f0efeb;
+      --muted: #9b9a96;
+      --home: #4caf7d;
+      --gone: #9b9a96;
+      --arrived: #5b9be0;
+      --leaving: #d8915c;
+      --toast-bg: #f0efeb;
+      --toast-fg: #141413;
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+  header {
+    padding: 0.9rem 1.1rem 0.7rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 5;
+  }
+  header h1 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header .view-title {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: lowercase;
+  }
+  main {
+    flex: 1;
+    padding: 1rem 1rem 6.5rem;
+    max-width: 560px;
+    width: 100%;
+    margin: 0 auto;
+    overflow-y: auto;
+  }
+  nav.tabs {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 5;
+  }
+  nav.tabs button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 0.7rem 0.25rem 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    position: relative;
+    min-height: 56px;
+  }
+  nav.tabs button.active { color: var(--text); font-weight: 600; }
+  nav.tabs button.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 30%;
+    right: 30%;
+    height: 2px;
+    background: var(--text);
+    border-radius: 0 0 2px 2px;
+  }
+
+  /* Suggestions */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+  }
+  .sug-item {
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .sug-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .sug-item:first-child { padding-top: 0; }
+  .sug-item strong { font-weight: 600; font-size: 0.95rem; }
+  .sug-item .reasons {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-top: 0.2rem;
+    line-height: 1.4;
+  }
+
+  /* Action buttons */
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+    margin-top: 0.5rem;
+  }
+  .action-btn {
+    appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem 0.8rem;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 120px;
+    transition: transform 0.08s ease, background 0.15s ease;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .action-btn:active { transform: scale(0.97); background: var(--surface-2); }
+  .action-btn .dot {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+  }
+  .action-btn .label {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .action-btn .sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .action-btn[data-status="home"]    .dot { background: var(--home); }
+  .action-btn[data-status="gone"]    .dot { background: var(--gone); }
+  .action-btn[data-status="arrived"] .dot { background: var(--arrived); }
+  .action-btn[data-status="leaving"] .dot { background: var(--leaving); }
+
+  /* Log list */
+  .log-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .log-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .log-item .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .log-item .status {
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .log-item .status .dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+  }
+  .log-item .meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+  .log-item .actions { display: flex; gap: 0.4rem; }
+  .log-item .actions button {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .log-item .actions button.danger { color: var(--danger); }
+  .log-item .note { font-size: 0.85rem; color: var(--muted); }
+
+  /* Forms */
+  .form { display: flex; flex-direction: column; gap: 1rem; }
+  .field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .field label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  input[type="date"], input[type="time"], input[type="text"],
+  input[type="number"], select, textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 0.85rem;
+    color: var(--text);
+    width: 100%;
+    font-size: 16px;
+    font-family: inherit;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 220px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .btn {
+    appearance: none;
+    border: none;
+    background: var(--text);
+    color: var(--bg);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 46px;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn.danger { background: var(--danger); color: white; }
+  .btn-row { display: flex; gap: 0.6rem; }
+  .btn-row .btn { flex: 1; }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 2.5rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .parse-summary {
+    font-size: 0.88rem;
+    margin-bottom: 0.75rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .parse-summary code {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+  }
+  .parse-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.5rem;
+    margin-bottom: 1rem;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .parse-row {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    padding: 0.4rem 0.3rem;
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    gap: 0.5rem;
+    line-height: 1.4;
+  }
+  .parse-row:last-child { border-bottom: none; }
+  .parse-row.error { color: var(--danger); }
+  .parse-row .check { flex-shrink: 0; font-weight: 600; }
+
+  .settings-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+  }
+  .settings-section h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin-bottom: 0.7rem;
+    font-weight: 600;
+  }
+  .settings-section p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 5.5rem;
+    left: 50%;
+    transform: translate(-50%, 20px);
+    background: var(--toast-bg);
+    color: var(--toast-fg);
+    padding: 0.7rem 1.1rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    z-index: 100;
+    max-width: calc(100% - 2rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Bird Watching</h1>
+  <span class="view-title" id="view-title"></span>
+</header>
+<main id="view"></main>
+<nav class="tabs" id="tabs"></nav>
+<div id="toast"></div>
+<script>
+"use strict";
+
+// ---------- Constants ----------
+const STORAGE_KEY = 'birdwatching:entries:v1';
+const PREFS_KEY = 'birdwatching:prefs:v1';
+const PRELOADED_KEY = 'birdwatching:preloaded:v1';
+const PRELOAD_YEAR = 2026;
+const PRELOAD_LINES = `8:32pm friday april 24 - No
+9:52pm friday april 24 - No
+9:54pm friday april 24 - Yes Just got home
+10:03pm friday april 24 - Yes walked into house
+12:43pm saturday april 25 - No
+4:32pm saturday april 25 - No
+10:42pm saturday april 25 - No
+11:17pm saturday april 25 - Just got home
+11:21pm saturday april 25 - Walked in
+12:02pm sunday april 26 - Yes
+5:11pm sunday april 26 - Yes
+11:30pm monday april 27 - Yes
+10:45am tuesday april 28 - Yes
+4:37pm tuesday april 28 - No
+7:44pm tuesday april 28 - Yes
+1:27pm thursday april 30 - No
+4:21pm thursday april 30 - No
+6:07pm thursday april 30 - Yes
+2:09pm saturday may 2 - No
+9:29pm saturday may 2 - Yes
+12:58am sunday may 3 - Yes
+2:53pm sunday may 3 - No
+3:49pm monday may 4 - Yes`;
+
+const STATUSES = {
+  home:    { label: 'Yes (home)',   short: 'Home',    sub: 'home' },
+  gone:    { label: 'No (gone)',    short: 'Gone',    sub: 'gone' },
+  arrived: { label: 'Just arrived', short: 'Arrived', sub: '' },
+  leaving: { label: 'Just leaving', short: 'Leaving', sub: '' }
+};
+const DAY_NAMES  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAY_SHORT  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_LONG = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+
+// ---------- State ----------
+const state = {
+  entries: [],
+  prefs: { startHour: 11, endHour: 18 },
+  view: 'main',
+  editingId: null,
+  parsePreview: null
+};
+
+// ---------- Storage ----------
+function loadStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state.entries = raw ? JSON.parse(raw) : [];
+  } catch { state.entries = []; }
+  try {
+    const p = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
+    if (p && typeof p === 'object') Object.assign(state.prefs, p);
+  } catch {}
+
+  // First-run preload — only if we've never preloaded before
+  if (!localStorage.getItem(PRELOADED_KEY)) {
+    if (state.entries.length === 0) {
+      const lines = PRELOAD_LINES.split('\n');
+      for (const ln of lines) {
+        const r = parseLine(ln, PRELOAD_YEAR);
+        if (r && !r.error) {
+          state.entries.push({
+            id: genId(),
+            timestamp: r.timestamp,
+            status: r.status,
+            note: ''
+          });
+        }
+      }
+      saveEntries();
+    }
+    localStorage.setItem(PRELOADED_KEY, '1');
+  }
+}
+function saveEntries() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries)); }
+function savePrefs()   { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); }
+function genId()       { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// ---------- Parser ----------
+function parseLine(line, explicitYear) {
+  const original = String(line || '').trim();
+  if (!original) return null;
+  const text = original.toLowerCase();
+
+  // Time: first time in optional range "4:39-4:21pm" or "8:32pm"
+  const timeRe = /(\d{1,2}):(\d{2})(?:\s*-\s*\d{1,2}:\d{2})?\s*(am|pm)?/;
+  const tm = text.match(timeRe);
+  if (!tm) return { error: 'no time found', line: original };
+  let h = parseInt(tm[1], 10);
+  const min = parseInt(tm[2], 10);
+  const ampm = tm[3];
+  if (ampm === 'pm' && h !== 12) h += 12;
+  else if (ampm === 'am' && h === 12) h = 0;
+  if (h < 0 || h > 23 || min < 0 || min > 59) return { error: 'invalid time', line: original };
+
+  // Month + day
+  let monthIdx = -1, dayNum = -1;
+  for (let i = 0; i < 12; i++) {
+    const m = text.match(new RegExp('\\b' + MONTHS_LONG[i] + '\\s+(\\d{1,2})\\b'));
+    if (m) { monthIdx = i; dayNum = parseInt(m[1], 10); break; }
+  }
+  if (monthIdx < 0) return { error: 'no month/day found', line: original };
+  if (dayNum < 1 || dayNum > 31) return { error: 'invalid day', line: original };
+
+  // Year
+  let useYear;
+  if (explicitYear != null) {
+    useYear = explicitYear;
+  } else {
+    useYear = new Date().getFullYear();
+    const tentative = new Date(useYear, monthIdx, dayNum).getTime();
+    if (tentative > Date.now() + 90 * 86400000) useYear -= 1;
+  }
+  const date = new Date(useYear, monthIdx, dayNum, h, min, 0, 0);
+
+  // Status — order matters: arrived/leaving keywords beat plain yes/no
+  let status = null;
+  if (/\bjust got home\b|\bjust arrived\b|\bwalked in\b|\bwalked into\b|\bgot home\b/.test(text)) status = 'arrived';
+  else if (/\bjust leaving\b|\bjust left\b|\bheading out\b/.test(text)) status = 'leaving';
+  else if (/\byes\b/.test(text)) status = 'home';
+  else if (/\bno\b/.test(text)) status = 'gone';
+  if (!status) return { error: 'no status keyword', line: original };
+
+  return { timestamp: date.getTime(), status, line: original };
+}
+
+// ---------- Suggestions ----------
+function buildSuggestions() {
+  const { startHour, endHour } = state.prefs;
+  if (state.entries.length === 0) return [];
+
+  // Bucket by (day-of-week, hour)
+  const buckets = {};
+  for (const e of state.entries) {
+    const d = new Date(e.timestamp);
+    const day = d.getDay();
+    const hour = d.getHours();
+    const k = day + '-' + hour;
+    if (!buckets[k]) buckets[k] = { day, hour, count: 0, gone: 0, home: 0 };
+    buckets[k].count++;
+    if (e.status === 'gone' || e.status === 'leaving') buckets[k].gone++;
+    if (e.status === 'home' || e.status === 'arrived') buckets[k].home++;
+  }
+
+  const candidates = [];
+  for (let day = 0; day < 7; day++) {
+    for (let hour = startHour; hour < endHour; hour++) {
+      const b = buckets[day + '-' + hour] || { day, hour, count: 0, gone: 0, home: 0 };
+      const goneRate = b.count ? b.gone / b.count : 0;
+      const prev = buckets[day + '-' + (hour - 1)];
+      const next = buckets[day + '-' + (hour + 1)];
+      const flip =
+        (prev && next) &&
+        ((prev.gone > 0 && next.home > 0) || (prev.home > 0 && next.gone > 0));
+
+      // skip well-observed always-home buckets
+      if (b.count >= 3 && goneRate === 0 && !flip) continue;
+
+      let score = 0;
+      const reasons = [];
+
+      if (b.count >= 1 && goneRate >= 0.5) {
+        score += goneRate * 2.0;
+        reasons.push(`gone in ${b.gone} of ${b.count} past observation${b.count === 1 ? '' : 's'}`);
+      } else if (b.count >= 1 && b.gone >= 1) {
+        score += goneRate * 1.0;
+        reasons.push(`gone in ${b.gone} of ${b.count} past observations`);
+      }
+
+      if (b.count === 0) {
+        score += 0.7;
+        reasons.push('no data yet');
+      } else if (b.count === 1) {
+        score += 0.4;
+        reasons.push('only 1 prior observation');
+      }
+
+      if (flip) {
+        score += 1.2;
+        reasons.push('transition zone — adjacent hours flip');
+      }
+
+      if (score > 0 && reasons.length > 0) {
+        candidates.push({ day, hour, score, reasons, count: b.count });
+      }
+    }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+
+  // Spread by day-of-week first, then fill remaining slots
+  const picked = [];
+  const usedDays = new Set();
+  for (const c of candidates) {
+    if (picked.length >= 3) break;
+    if (!usedDays.has(c.day)) { picked.push(c); usedDays.add(c.day); }
+  }
+  for (const c of candidates) {
+    if (picked.length >= 3) break;
+    if (!picked.includes(c)) picked.push(c);
+  }
+  return picked;
+}
+
+// ---------- Format ----------
+function fmtTime(ms) {
+  const d = new Date(ms);
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const am = h < 12;
+  h = h % 12 || 12;
+  return h + ':' + String(m).padStart(2, '0') + (am ? 'am' : 'pm');
+}
+function fmtDateLine(ms) {
+  const d = new Date(ms);
+  return DAY_SHORT[d.getDay()] + ', ' + MONTH_SHORT[d.getMonth()] + ' ' + d.getDate();
+}
+function fmtHour12(h) {
+  const am = h < 12;
+  const h12 = h % 12 || 12;
+  return h12 + (am ? 'am' : 'pm');
+}
+function fmtHourRange(h) {
+  const a = h, b = (h + 1) % 24;
+  const aAm = a < 12, bAm = b < 12;
+  const a12 = a % 12 || 12, b12 = b % 12 || 12;
+  if (aAm === bAm) return `${a12}:00–${b12}:00${bAm ? 'am' : 'pm'}`;
+  return `${a12}:00${aAm ? 'am' : 'pm'}–${b12}:00${bAm ? 'am' : 'pm'}`;
+}
+function escape(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
+}
+
+// ---------- Toast ----------
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 1700);
+}
+
+// ---------- Views ----------
+function viewTitle() {
+  return ({
+    main: 'now',
+    log: 'history',
+    add: state.editingId ? 'edit' : 'add',
+    import: 'paste-in',
+    settings: 'settings'
+  })[state.view];
+}
+
+function renderMain() {
+  const sugs = buildSuggestions();
+  const sugInner = sugs.length
+    ? sugs.map(s => `
+        <div class="sug-item">
+          <strong>${escape(DAY_NAMES[s.day])} ${escape(fmtHourRange(s.hour))}</strong>
+          <div class="reasons">${escape(s.reasons.join(' · '))}</div>
+        </div>`).join('')
+    : `<div class="sug-item"><div class="reasons">${
+        state.entries.length === 0
+          ? 'Add a few observations and suggestions will appear here.'
+          : 'No standout times yet within your preferred window. Keep logging.'
+      }</div></div>`;
+
+  return `
+    <div class="card">
+      <h2>Suggested next checks</h2>
+      ${sugInner}
+    </div>
+    <div class="action-grid">
+      <button class="action-btn" data-status="home">
+        <span class="dot"></span><span class="label">Yes</span><span class="sub">home</span>
+      </button>
+      <button class="action-btn" data-status="gone">
+        <span class="dot"></span><span class="label">No</span><span class="sub">gone</span>
+      </button>
+      <button class="action-btn" data-status="arrived">
+        <span class="dot"></span><span class="label">Just arrived</span>
+      </button>
+      <button class="action-btn" data-status="leaving">
+        <span class="dot"></span><span class="label">Just leaving</span>
+      </button>
+    </div>`;
+}
+
+function renderLog() {
+  if (state.entries.length === 0) {
+    return '<div class="empty">No observations yet.<br>Tap a button on the Now tab to log one.</div>';
+  }
+  const sorted = state.entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+  return '<div class="log-list">' + sorted.map(e => `
+    <div class="log-item" data-id="${escape(e.id)}">
+      <div class="row">
+        <div class="status">
+          <span class="dot" style="background:var(--${e.status})"></span>
+          ${escape(STATUSES[e.status]?.short || e.status)}
+        </div>
+        <div class="actions">
+          <button data-act="edit">Edit</button>
+          <button data-act="del" class="danger">Delete</button>
+        </div>
+      </div>
+      <div class="meta">
+        <span>${escape(fmtDateLine(e.timestamp))}</span>
+        <span>${escape(fmtTime(e.timestamp))}</span>
+      </div>
+      ${e.note ? `<div class="note">${escape(e.note)}</div>` : ''}
+    </div>
+  `).join('') + '</div>';
+}
+
+function renderAdd() {
+  const pad = n => String(n).padStart(2, '0');
+  let initial = { date: '', time: '', status: 'home', note: '' };
+  if (state.editingId) {
+    const e = state.entries.find(x => x.id === state.editingId);
+    if (e) {
+      const d = new Date(e.timestamp);
+      initial = {
+        date: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()),
+        time: pad(d.getHours()) + ':' + pad(d.getMinutes()),
+        status: e.status,
+        note: e.note || ''
+      };
+    }
+  } else {
+    const now = new Date();
+    initial.date = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+    initial.time = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  }
+  const opts = Object.entries(STATUSES).map(([k, v]) =>
+    `<option value="${k}"${initial.status === k ? ' selected' : ''}>${escape(v.label)}</option>`
+  ).join('');
+
+  return `
+    <form id="entry-form" class="form">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="f-date" value="${escape(initial.date)}" required>
+      </div>
+      <div class="field">
+        <label>Time</label>
+        <input type="time" id="f-time" value="${escape(initial.time)}" required>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-status">${opts}</select>
+      </div>
+      <div class="field">
+        <label>Note (optional)</label>
+        <input type="text" id="f-note" value="${escape(initial.note)}" placeholder="e.g. lights on, car gone">
+      </div>
+      <div class="btn-row">
+        ${state.editingId ? '<button type="button" class="btn secondary" id="cancel-edit">Cancel</button>' : ''}
+        <button type="submit" class="btn">${state.editingId ? 'Save changes' : 'Save observation'}</button>
+      </div>
+    </form>`;
+}
+
+function renderImport() {
+  if (state.parsePreview) {
+    const valid = state.parsePreview.filter(r => !r.error);
+    const errors = state.parsePreview.filter(r => r.error);
+    const items = state.parsePreview.map(r => {
+      if (r.error) {
+        return `<div class="parse-row error"><span class="check">✗</span><span>${escape(r.line)} <em>(${escape(r.error)})</em></span></div>`;
+      }
+      const d = new Date(r.timestamp);
+      return `<div class="parse-row"><span class="check">✓</span><span>${escape(DAY_SHORT[d.getDay()])} ${escape(MONTH_SHORT[d.getMonth()])} ${d.getDate()} ${escape(fmtTime(r.timestamp))} — ${escape(STATUSES[r.status].short)}</span></div>`;
+    }).join('');
+    return `
+      <div class="parse-summary">${valid.length} valid · ${errors.length} error${errors.length === 1 ? '' : 's'}</div>
+      <div class="parse-list">${items}</div>
+      <div class="btn-row">
+        <button class="btn secondary" id="cancel-parse">Cancel</button>
+        <button class="btn" id="confirm-parse"${valid.length === 0 ? ' disabled' : ''}>Import ${valid.length} entr${valid.length === 1 ? 'y' : 'ies'}</button>
+      </div>`;
+  }
+  return `
+    <div class="parse-summary">Paste observations, one per line. Format: <code>8:32pm friday april 24 - No</code></div>
+    <textarea id="paste-area" placeholder="8:32pm friday april 24 - No&#10;9:54pm friday april 24 - Yes Just got home&#10;4:39-4:21pm thursday april 30 - No"></textarea>
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn" id="parse-btn">Parse</button>
+    </div>`;
+}
+
+function renderSettings() {
+  const startOpts = Array.from({ length: 24 }, (_, h) =>
+    `<option value="${h}"${state.prefs.startHour === h ? ' selected' : ''}>${fmtHour12(h)}</option>`
+  ).join('');
+  const endOpts = Array.from({ length: 25 }, (_, h) =>
+    `<option value="${h}"${state.prefs.endHour === h ? ' selected' : ''}>${h === 24 ? 'midnight' : fmtHour12(h)}</option>`
+  ).join('');
+  return `
+    <div class="settings-section">
+      <h3>Preferred check window</h3>
+      <p style="margin-bottom:.7rem">Suggestions only consider hours in this range.</p>
+      <div class="range-row">
+        <div class="field"><label>From</label><select id="prefs-start">${startOpts}</select></div>
+        <div class="field"><label>Until</label><select id="prefs-end">${endOpts}</select></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>Backup</h3>
+      <div class="btn-row" style="margin-bottom:.5rem">
+        <button class="btn secondary" id="export-btn">Copy JSON to clipboard</button>
+      </div>
+      <p>Exports all ${state.entries.length} observation${state.entries.length === 1 ? '' : 's'}.</p>
+    </div>
+    <div class="settings-section">
+      <h3>Danger zone</h3>
+      <button class="btn danger" id="clear-btn">Clear all data</button>
+    </div>
+    <div class="settings-section">
+      <h3>About</h3>
+      <p>Bird Watching · personal observation logger. All data stays on this device — nothing leaves your browser.</p>
+    </div>`;
+}
+
+function renderTabs() {
+  const tabs = [
+    { k: 'main',     l: 'Now' },
+    { k: 'log',      l: 'Log' },
+    { k: 'add',      l: 'Add' },
+    { k: 'import',   l: 'Paste' },
+    { k: 'settings', l: 'More' }
+  ];
+  document.getElementById('tabs').innerHTML = tabs.map(t =>
+    `<button data-tab="${t.k}"${state.view === t.k ? ' class="active"' : ''}>${t.l}</button>`
+  ).join('');
+}
+
+function render() {
+  document.getElementById('view-title').textContent = viewTitle();
+  const renderers = {
+    main: renderMain, log: renderLog, add: renderAdd, import: renderImport, settings: renderSettings
+  };
+  document.getElementById('view').innerHTML = renderers[state.view]();
+  renderTabs();
+  bindAll();
+  document.getElementById('view').scrollTop = 0;
+}
+
+// ---------- Bindings ----------
+function bindAll() {
+  document.querySelectorAll('nav.tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      const tab = b.dataset.tab;
+      // reset transient state when leaving views
+      if (tab !== 'add') state.editingId = null;
+      else state.editingId = null; // tabbing into Add starts a fresh form
+      if (tab !== 'import') state.parsePreview = null;
+      state.view = tab;
+      render();
+    });
+  });
+
+  if (state.view === 'main') bindMain();
+  else if (state.view === 'log') bindLog();
+  else if (state.view === 'add') bindAdd();
+  else if (state.view === 'import') bindImport();
+  else if (state.view === 'settings') bindSettings();
+}
+
+function bindMain() {
+  document.querySelectorAll('.action-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const status = b.dataset.status;
+      state.entries.push({
+        id: genId(),
+        timestamp: Date.now(),
+        status,
+        note: ''
+      });
+      saveEntries();
+      toast('Logged: ' + STATUSES[status].label);
+      render();
+    });
+  });
+}
+
+function bindLog() {
+  document.querySelectorAll('.log-item').forEach(item => {
+    const id = item.dataset.id;
+    const editBtn = item.querySelector('[data-act="edit"]');
+    const delBtn = item.querySelector('[data-act="del"]');
+    editBtn.addEventListener('click', () => {
+      state.editingId = id;
+      state.view = 'add';
+      render();
+    });
+    delBtn.addEventListener('click', () => {
+      if (!confirm('Delete this observation?')) return;
+      state.entries = state.entries.filter(e => e.id !== id);
+      saveEntries();
+      render();
+      toast('Deleted');
+    });
+  });
+}
+
+function bindAdd() {
+  const form = document.getElementById('entry-form');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const date = document.getElementById('f-date').value;
+    const time = document.getElementById('f-time').value;
+    const status = document.getElementById('f-status').value;
+    const note = document.getElementById('f-note').value.trim();
+    if (!date || !time) { toast('Need date and time'); return; }
+    const [y, mo, da] = date.split('-').map(Number);
+    const [hh, mm] = time.split(':').map(Number);
+    const ts = new Date(y, mo - 1, da, hh, mm, 0, 0).getTime();
+    if (state.editingId) {
+      const entry = state.entries.find(x => x.id === state.editingId);
+      if (entry) { entry.timestamp = ts; entry.status = status; entry.note = note; }
+      state.editingId = null;
+      toast('Updated');
+    } else {
+      state.entries.push({ id: genId(), timestamp: ts, status, note });
+      toast('Added');
+    }
+    saveEntries();
+    state.view = 'log';
+    render();
+  });
+  const cancel = document.getElementById('cancel-edit');
+  if (cancel) cancel.addEventListener('click', () => {
+    state.editingId = null;
+    state.view = 'log';
+    render();
+  });
+}
+
+function bindImport() {
+  if (state.parsePreview) {
+    document.getElementById('cancel-parse').addEventListener('click', () => {
+      state.parsePreview = null;
+      render();
+    });
+    document.getElementById('confirm-parse').addEventListener('click', () => {
+      const valid = state.parsePreview.filter(r => !r.error);
+      for (const r of valid) {
+        state.entries.push({ id: genId(), timestamp: r.timestamp, status: r.status, note: '' });
+      }
+      saveEntries();
+      const n = valid.length;
+      state.parsePreview = null;
+      state.view = 'log';
+      render();
+      toast(`Imported ${n} entr${n === 1 ? 'y' : 'ies'}`);
+    });
+  } else {
+    document.getElementById('parse-btn').addEventListener('click', () => {
+      const text = document.getElementById('paste-area').value;
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) { toast('Nothing to parse'); return; }
+      state.parsePreview = lines.map(l => parseLine(l)).filter(r => r != null);
+      render();
+    });
+  }
+}
+
+function bindSettings() {
+  document.getElementById('prefs-start').addEventListener('change', e => {
+    state.prefs.startHour = parseInt(e.target.value, 10);
+    savePrefs();
+  });
+  document.getElementById('prefs-end').addEventListener('change', e => {
+    state.prefs.endHour = parseInt(e.target.value, 10);
+    savePrefs();
+  });
+  document.getElementById('export-btn').addEventListener('click', async () => {
+    const payload = {
+      app: 'bird-watching',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      prefs: state.prefs,
+      entries: state.entries
+    };
+    const json = JSON.stringify(payload, null, 2);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(json);
+      copied = true;
+    } catch {
+      // Fallback for older browsers / no permission
+      const ta = document.createElement('textarea');
+      ta.value = json;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { copied = document.execCommand('copy'); } catch {}
+      document.body.removeChild(ta);
+    }
+    toast(copied ? 'Copied to clipboard' : 'Could not copy — try a different browser');
+  });
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    if (!confirm('Permanently delete all observations? This cannot be undone.')) return;
+    if (!confirm('Really delete everything?')) return;
+    state.entries = [];
+    saveEntries();
+    render();
+    toast('All data cleared');
+  });
+}
+
+// ---------- Init ----------
+loadStorage();
+render();
+</script>
+</body>
+</html>

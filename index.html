@@ -529,66 +529,100 @@ function buildSuggestions() {
   const { startHour, endHour } = state.prefs;
   if (state.entries.length === 0) return [];
 
-  // Bucket by (day-of-week, hour)
-  const buckets = {};
+  // Group observations by day-of-week
+  const byDay = {};
+  for (let d = 0; d < 7; d++) byDay[d] = [];
   for (const e of state.entries) {
     const d = new Date(e.timestamp);
-    const day = d.getDay();
-    const hour = d.getHours();
-    const k = day + '-' + hour;
-    if (!buckets[k]) buckets[k] = { day, hour, count: 0, gone: 0, home: 0 };
-    buckets[k].count++;
-    if (e.status === 'gone' || e.status === 'leaving') buckets[k].gone++;
-    if (e.status === 'home' || e.status === 'arrived') buckets[k].home++;
+    byDay[d.getDay()].push(e);
   }
 
-  const candidates = [];
+  // Find home→gone transition windows for each day (skip Wednesday = 3)
+  const transitions = [];
   for (let day = 0; day < 7; day++) {
-    for (let hour = startHour; hour < endHour; hour++) {
-      const b = buckets[day + '-' + hour] || { day, hour, count: 0, gone: 0, home: 0 };
-      const goneRate = b.count ? b.gone / b.count : 0;
-      const prev = buckets[day + '-' + (hour - 1)];
-      const next = buckets[day + '-' + (hour + 1)];
-      const flip =
-        (prev && next) &&
-        ((prev.gone > 0 && next.home > 0) || (prev.home > 0 && next.gone > 0));
+    if (day === 3) continue; // skip Wednesday
+    const entries = byDay[day].sort((a, b) => a.timestamp - b.timestamp);
+    if (entries.length < 2) continue;
 
-      // skip well-observed always-home buckets
-      if (b.count >= 3 && goneRate === 0 && !flip) continue;
+    const isHome = e => e.status === 'home' || e.status === 'arrived';
+    const isGone = e => e.status === 'gone' || e.status === 'leaving';
 
-      let score = 0;
-      const reasons = [];
-
-      if (b.count >= 1 && goneRate >= 0.5) {
-        score += goneRate * 2.0;
-        reasons.push(`gone in ${b.gone} of ${b.count} past observation${b.count === 1 ? '' : 's'}`);
-      } else if (b.count >= 1 && b.gone >= 1) {
-        score += goneRate * 1.0;
-        reasons.push(`gone in ${b.gone} of ${b.count} past observations`);
+    for (let i = 0; i < entries.length - 1; i++) {
+      if (isHome(entries[i]) && isGone(entries[i + 1])) {
+        const homeHour = new Date(entries[i].timestamp).getHours();
+        const goneHour = new Date(entries[i + 1].timestamp).getHours();
+        const gapSize = goneHour - homeHour;
+        if (gapSize > 0 && gapSize <= 8) {
+          transitions.push({ day, homeHour, goneHour, gapSize });
+        }
       }
+    }
+  }
 
-      if (b.count === 0) {
-        score += 0.7;
-        reasons.push('no data yet');
-      } else if (b.count === 1) {
-        score += 0.4;
-        reasons.push('only 1 prior observation');
+  // Count observations per hour
+  const obsCount = {};
+  for (const e of state.entries) {
+    const d = new Date(e.timestamp);
+    const k = d.getDay() + '-' + d.getHours();
+    obsCount[k] = (obsCount[k] || 0) + 1;
+  }
+
+  // Score candidate hours within transition windows (or under-observed times)
+  const candidates = [];
+  if (transitions.length > 0) {
+    // Prioritize hours in transition windows
+    for (const t of transitions) {
+      for (let h = Math.max(t.homeHour, startHour); h <= Math.min(t.goneHour, endHour - 1); h++) {
+        const k = t.day + '-' + h;
+        const count = obsCount[k] || 0;
+        let score = 0;
+        const reasons = [];
+
+        // Score based on gap size (narrow = more likely to catch)
+        if (t.gapSize <= 2) score += 4;
+        else if (t.gapSize <= 4) score += 2.5;
+        else score += 1.5;
+
+        // Bonus for under-observed hours
+        if (count === 0) {
+          score += 2;
+          reasons.push('never checked');
+        } else if (count === 1) {
+          score += 1;
+          reasons.push('only 1 prior check');
+        }
+
+        // Window info
+        const gapStr = t.gapSize === 1 ? '1h' : `${t.gapSize}h`;
+        reasons.push(`departure: ${fmtHour12(t.homeHour)}–${fmtHour12(t.goneHour)} (${gapStr})`);
+
+        candidates.push({ day: t.day, hour: h, score, reasons });
       }
+    }
+  }
 
-      if (flip) {
-        score += 1.2;
-        reasons.push('transition zone — adjacent hours flip');
-      }
-
-      if (score > 0 && reasons.length > 0) {
-        candidates.push({ day, hour, score, reasons, count: b.count });
+  // If no transitions found, fall back to under-observed times in preferred window
+  if (candidates.length === 0) {
+    for (let day = 0; day < 7; day++) {
+      if (day === 3) continue;
+      for (let hour = startHour; hour < endHour; hour++) {
+        const k = day + '-' + hour;
+        const count = obsCount[k] || 0;
+        if (count <= 1) {
+          candidates.push({
+            day,
+            hour,
+            score: count === 0 ? 1 : 0.5,
+            reasons: [count === 0 ? 'no data yet' : 'only 1 check']
+          });
+        }
       }
     }
   }
 
   candidates.sort((a, b) => b.score - a.score);
 
-  // Spread by day-of-week first, then fill remaining slots
+  // Pick top 3, spread across days
   const picked = [];
   const usedDays = new Set();
   for (const c of candidates) {

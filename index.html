@@ -435,7 +435,7 @@ const MONTHS_LONG = ['january','february','march','april','may','june','july','a
 // ---------- State ----------
 const state = {
   entries: [],
-  prefs: { startHour: 11, endHour: 18 },
+  prefs: { startHour: 11, endHour: 18, aiNotes: '' },
   view: 'main',
   editingId: null,
   parsePreview: null
@@ -634,6 +634,62 @@ function buildSuggestions() {
     if (!picked.includes(c)) picked.push(c);
   }
   return picked;
+}
+
+// ---------- AI prompt ----------
+function buildAiPrompt() {
+  const { startHour, endHour, aiNotes } = state.prefs;
+  const sorted = [...state.entries].sort((a, b) => a.timestamp - b.timestamp);
+  const lines = sorted.map(e => {
+    const d = new Date(e.timestamp);
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const note = e.note ? ` | note: ${e.note}` : '';
+    return `${date} ${DAY_SHORT[d.getDay()]} ${time} | ${e.status}${note}`;
+  });
+  const sugg = buildSuggestions().map(s =>
+    `- ${DAY_NAMES[s.day]} ${fmtHourRange(s.hour)} (${s.reasons.join('; ')})`
+  );
+  const endLabel = endHour === 24 ? 'midnight' : fmtHour12(endHour);
+  return [
+    'I use a personal app called "Bird Watching" to log observations of whether a particular bird is at its nest. Each time I check, I record a timestamp and one of four statuses:',
+    '- home = the bird is at the nest',
+    '- gone = the bird is away',
+    '- arrived = I saw the bird just arrive',
+    '- leaving = I saw the bird just leave',
+    '',
+    `My goal: figure out the bird's weekly routine (by day of week and hour) and tell me the best times to check so I'm most likely to catch it arriving or leaving. I prefer to check between ${fmtHour12(startHour)} and ${endLabel}, and I generally skip Wednesdays.`,
+    '',
+    "The app's own simple heuristic currently suggests:",
+    sugg.length ? sugg.join('\n') : '- (no suggestions yet)',
+    '',
+    aiNotes && aiNotes.trim() ? `Extra context from me:\n${aiNotes.trim()}\n` : null,
+    'Please:',
+    '1. Summarize the patterns you see (typical home/away times per day of week, arrival/departure windows).',
+    '2. Say how confident you are given how much data there is, and point out gaps.',
+    '3. Suggest specific day + time windows for my next few checks, explaining why, and whether the app\'s suggestions above look right.',
+    '',
+    `Observations (${lines.length}, local time, format: date day time | status | note):`,
+    lines.length ? lines.join('\n') : '(none yet)'
+  ].filter(x => x !== null).join('\n');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+    return ok;
+  }
 }
 
 // ---------- Format ----------
@@ -840,6 +896,19 @@ function renderSettings() {
       </div>
     </div>
     <div class="settings-section">
+      <h3>Ask an AI for better suggestions</h3>
+      <p style="margin-bottom:.7rem">Copies a short description of this app, your goal, the current suggestions, and all ${state.entries.length} logged observation${state.entries.length === 1 ? '' : 's'} — paste it into ChatGPT, Claude, etc.</p>
+      <div class="field" style="margin-bottom:.7rem">
+        <label>Extra context for the AI (optional)</label>
+        <textarea id="ai-notes" style="min-height:4.5rem" placeholder="e.g. Nest is in the oak by the back fence. Weekdays I can only check after 3pm.">${escape(state.prefs.aiNotes || '')}</textarea>
+      </div>
+      <div class="btn-row" style="margin-bottom:.5rem">
+        <button class="btn" id="ai-copy-btn">Copy AI prompt</button>
+        <button class="btn secondary" id="ai-preview-btn">Preview</button>
+      </div>
+      <textarea id="ai-preview" readonly style="display:none;min-height:14rem;font-size:.8rem"></textarea>
+    </div>
+    <div class="settings-section">
       <h3>Backup</h3>
       <div class="btn-row" style="margin-bottom:.5rem">
         <button class="btn secondary" id="export-btn">Copy JSON to clipboard</button>
@@ -1008,6 +1077,23 @@ function bindSettings() {
   document.getElementById('prefs-end').addEventListener('change', e => {
     state.prefs.endHour = parseInt(e.target.value, 10);
     savePrefs();
+  });
+  const aiNotes = document.getElementById('ai-notes');
+  const aiPreview = document.getElementById('ai-preview');
+  aiNotes.addEventListener('input', e => {
+    state.prefs.aiNotes = e.target.value;
+    savePrefs();
+    if (aiPreview.style.display !== 'none') aiPreview.value = buildAiPrompt();
+  });
+  document.getElementById('ai-preview-btn').addEventListener('click', e => {
+    const show = aiPreview.style.display === 'none';
+    aiPreview.style.display = show ? 'block' : 'none';
+    e.target.textContent = show ? 'Hide preview' : 'Preview';
+    if (show) aiPreview.value = buildAiPrompt();
+  });
+  document.getElementById('ai-copy-btn').addEventListener('click', async () => {
+    const ok = await copyText(buildAiPrompt());
+    toast(ok ? 'AI prompt copied — paste it into your AI chat' : 'Could not copy — use Preview and copy manually');
   });
   document.getElementById('export-btn').addEventListener('click', async () => {
     const payload = {

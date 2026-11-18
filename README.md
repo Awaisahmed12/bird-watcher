@@ -42,6 +42,7 @@ python3 -m http.server 8000
 - **Smart suggestions** — at the top of the Now tab, 2–3 suggested check times based on bucketed (day-of-week × hour) gone-rate, under-observed slots, and transition zones, filtered to your preferred window.
 - **Manual entry / edit** — Add tab, plus Edit/Delete on every history item.
 - **Bulk import** — paste lines like `8:32pm friday april 24 - No` or `4:39-4:21pm thursday april 30 - No` and review parse results before committing. Lenient about am/pm, weekday names, time ranges, and status keywords (`yes`, `no`, `just got home` → arrived, `walked in` → arrived, `just leaving` → leaving).
+- **Ask an AI** — More tab → "Copy AI prompt" copies a short description of the app, your goal, current suggestions, optional extra context you type, and every logged observation, ready to paste into any AI chat for better check-time suggestions. Use Preview to see/edit it first.
 - **Export backup** — copy all data as JSON to clipboard from the More tab.
 - **Preferred window setting** — defaults to 11 am–6 pm; suggestions stay inside it.
 - **First-run preload** — the seed observations load only if localStorage is empty on first load, then never again (a flag is set so re-clearing won't repopulate).
